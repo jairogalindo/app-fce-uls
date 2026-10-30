@@ -8,7 +8,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
 
-  // Estados para los filtros
   const [busqueda, setBusqueda] = useState('');
   const [filtroPrograma, setFiltroPrograma] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
@@ -31,10 +30,8 @@ export default function Home() {
     leerDatos();
   }, []);
 
-  // Extraer programas únicos para el selector
   const programasUnicos = Array.from(new Set(datos.map(p => p.programaKey || p.programa).filter(Boolean)));
 
-  // Lógica de filtrado en tiempo real
   const proyectosFiltrados = datos.filter(proyecto => {
     const textoBusqueda = busqueda.toLowerCase();
     const coincideTexto = busqueda === '' || 
@@ -58,7 +55,6 @@ export default function Home() {
         <p style={{ color: '#666', marginTop: '0.5rem', fontSize: '1.1rem' }}>Facultad de Ciencias de la Educación - ULS</p>
       </header>
 
-      {/* Barra de Filtros */}
       {!cargando && !error && (
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
           <input 
@@ -124,4 +120,24 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '1rem', paddingTop: '1rem
+                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee', fontSize: '0.9rem' }}>
+                  {proyecto.consecutivoConfirmadoPorTutor ? (
+                    <span style={{ color: '#0f5132', backgroundColor: '#d1e7dd', padding: '4px 8px', borderRadius: '4px', fontWeight: '500' }}>✓ Confirmado</span>
+                  ) : (
+                    <span style={{ color: '#842029', backgroundColor: '#f8d7da', padding: '4px 8px', borderRadius: '4px', fontWeight: '500' }}>⏳ Pendiente</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            
+            {proyectosFiltrados.length === 0 && (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', color: '#666', border: '1px dashed #ccc', borderRadius: '8px' }}>
+                No se encontraron proyectos con esos filtros.
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
