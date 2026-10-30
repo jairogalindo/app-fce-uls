@@ -107,4 +107,21 @@ export default function Home() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {proyectosFiltrados.map((proyecto) => (
-              <div key={proyecto.id} style={{ border
+              <div key={proyecto.id} style={{ border: '1px solid #e0e0e0', borderRadius: '12px', padding: '1.5rem', backgroundColor: '#ffffff', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#0056b3', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {proyecto.programaKey || proyecto.programa || 'Programa sin definir'}
+                </div>
+                <h2 style={{ fontSize: '1.2rem', color: '#222', marginBottom: '1rem', lineHeight: '1.4' }}>
+                  {proyecto.codigoInvestigacion || 'Registro sin código'}
+                </h2>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '0.95rem' }}>
+                    <span style={{ color: '#666' }}>Autor:</span> <strong>{proyecto.correoAutor || 'No registrado'}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.95rem' }}>
+                    <span style={{ color: '#666' }}>Tutor:</span> <strong>{proyecto.tutorPrincipal || 'Por asignar'}</strong>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '1rem', paddingTop: '1rem
