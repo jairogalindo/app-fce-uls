@@ -12,8 +12,13 @@ export default function Home() {
   const [tutores, setTutores] = useState<any[]>([]); // tutores
   const [maestrantes, setMaestrantes] = useState<any[]>([]); // maestrantes
 
-  // Búsqueda general
+  // Búsqueda general Proyectos
   const [busqueda, setBusqueda] = useState('');
+
+  // Filtros Maestrantes
+  const [busquedaMaestrantes, setBusquedaMaestrantes] = useState('');
+  const [filtroProgramaMaestrante, setFiltroProgramaMaestrante] = useState('');
+  const [filtroSemestreMaestrante, setFiltroSemestreMaestrante] = useState('');
 
   async function leerDatos() {
     setCargando(true);
@@ -21,7 +26,6 @@ export default function Home() {
     let tempTutores: any[] = [];
     let tempMaestrantes: any[] = [];
 
-    // Peticiones aisladas: Si una falla, las demás sobreviven
     try {
       const pSnap = await getDocs(collection(db, 'projects'));
       tempProyectos = pSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -50,6 +54,26 @@ export default function Home() {
     (p.titulo || '').toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  const maestrantesFiltrados = maestrantes.filter(m => {
+    const texto = busquedaMaestrantes.toLowerCase();
+    const coincideTexto = texto === '' || 
+      (m.nombre || m.nombres || '').toLowerCase().includes(texto) || 
+      (m.correo || m.email || '').toLowerCase().includes(texto) ||
+      (m.documento || m.cedula || '').toLowerCase().includes(texto);
+    
+    const coincidePrograma = filtroProgramaMaestrante === '' || m.programa === filtroProgramaMaestrante;
+    const coincideSemestre = filtroSemestreMaestrante === '' || m.semestre === filtroSemestreMaestrante;
+
+    return coincideTexto && coincidePrograma && coincideSemestre;
+  });
+
+  // Función para enmascarar cédula (Habeas Data)
+  const enmascararDocumento = (doc: string) => {
+    if (!doc) return 'No registrado';
+    if (doc.length <= 4) return '***' + doc;
+    return '***' + doc.slice(-4);
+  };
+
   return (
     <div style={{ backgroundColor: '#f3f4f6', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       
@@ -65,7 +89,7 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button style={{ backgroundColor: '#6366f1', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ Nuevo Tutor</button>
-          <button style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ Nuevo Maestrante</button>
+          <button onClick={() => { setVistaActiva('maestrantes'); alert("El formulario de registro se activará en el siguiente paso."); }} style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ Nuevo Maestrante</button>
           <button style={{ backgroundColor: '#1f2937', color: 'white', border: 'none', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '600', cursor: 'pointer' }}>+ Nuevo Proyecto</button>
         </div>
       </div>
@@ -96,7 +120,7 @@ export default function Home() {
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         
-        {/* VISTA: INICIO COMPLETA */}
+        {/* VISTA: INICIO */}
         {vistaActiva === 'inicio' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
             <div style={{ backgroundColor: '#0f172a', borderRadius: '16px', overflow: 'hidden', color: 'white', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
@@ -130,26 +154,18 @@ export default function Home() {
               <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#111' }}>Directorio de Proyectos</h2>
               <input type="text" placeholder="Buscar título o código..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #ccc', minWidth: '300px' }} />
             </div>
-            
             {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando datos...</div> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
                 {proyectosFiltrados.map(proyecto => (
                   <div key={proyecto.id} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{ backgroundColor: '#4338ca', color: 'white', padding: '4px 12px', borderRadius: '16px', fontWeight: 'bold', fontSize: '0.8rem' }}>{proyecto.programaKey || proyecto.programa || 'PROG'}</span>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                        <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '4px 12px', borderRadius: '16px', fontWeight: '600', fontSize: '0.8rem' }}>{proyecto.estado || 'En Curso'}</span>
-                        <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '16px', fontWeight: '500', fontSize: '0.8rem', border: '1px solid #e2e8f0' }}>{proyecto.codigoInvestigacion || 'Sin código'}</span>
-                      </div>
+                      <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '16px', fontWeight: '500', fontSize: '0.8rem', border: '1px solid #e2e8f0' }}>{proyecto.codigoInvestigacion || 'Sin código'}</span>
                     </div>
-                    <h3 style={{ color: '#7f1d1d', fontSize: '1.25rem', fontWeight: 'bold', margin: '0 0 1.5rem 0', lineHeight: '1.4' }}>{proyecto.titulo || proyecto.resumen || 'Título de la investigación no registrado'}</h3>
+                    <h3 style={{ color: '#7f1d1d', fontSize: '1.25rem', fontWeight: 'bold', margin: '0 0 1.5rem 0', lineHeight: '1.4' }}>{proyecto.titulo || proyecto.resumen || 'Título no registrado'}</h3>
                     <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>Autor:</span>
                       <span style={{ color: '#047857', fontWeight: 'bold', fontSize: '0.95rem', textAlign: 'right' }}>{proyecto.nombreAutor || proyecto.correoAutor || 'No registrado'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
-                      <span style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: '500' }}>Tutor:</span>
-                      <span style={{ color: '#1e3a8a', fontWeight: 'bold', fontSize: '0.95rem' }}>{proyecto.tutorPrincipal || 'No asignado'}</span>
                     </div>
                     <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
                       <span style={{ color: '#475569', fontWeight: '600', fontSize: '0.9rem' }}>Semestre {proyecto.semestre || 'I'}</span>
@@ -162,24 +178,82 @@ export default function Home() {
           </div>
         )}
 
-        {/* VISTA: TUTORES */}
-        {vistaActiva === 'tutores' && (
+        {/* ================= VISTA: MAESTRANTES (NUEVO DISEÑO) ================= */}
+        {vistaActiva === 'maestrantes' && (
           <div>
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem', color: '#111' }}>Directorio Docente (Tutores)</h2>
-            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando tutores...</div> : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {tutores.length === 0 ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#111' }}>Directorio de Maestrantes</h2>
+              <button onClick={() => alert("El formulario de registro se activará en el siguiente paso.")} style={{ padding: '0.8rem 1.5rem', backgroundColor: '#065f46', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Nuevo Maestrante</button>
+            </div>
+
+            {/* Filtros específicos de Maestrantes */}
+            {!cargando && (
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                <input type="text" placeholder="Buscar por nombre, correo o cédula..." value={busquedaMaestrantes} onChange={(e) => setBusquedaMaestrantes(e.target.value)} style={{ flex: '1 1 250px', padding: '0.6rem 1rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem' }} />
+                <select value={filtroProgramaMaestrante} onChange={(e) => setFiltroProgramaMaestrante(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem', backgroundColor: 'white' }}>
+                  <option value="">Todos los programas</option>
+                  <option value="MDGEVA">MDGEVA</option>
+                  <option value="MDO">MDO</option>
+                  <option value="MDL">MDL</option>
+                  <option value="MLGE">MLGE</option>
+                </select>
+                <select value={filtroSemestreMaestrante} onChange={(e) => setFiltroSemestreMaestrante(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: '6px', border: '1px solid #ccc', fontSize: '0.95rem', backgroundColor: 'white' }}>
+                  <option value="">Todos los semestres</option>
+                  <option value="1">Semestre 1</option>
+                  <option value="2">Semestre 2</option>
+                  <option value="3">Semestre 3</option>
+                  <option value="4">Semestre 4</option>
+                  <option value="Egresado">Egresado</option>
+                </select>
+              </div>
+            )}
+
+            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando maestrantes...</div> : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                {maestrantesFiltrados.length === 0 ? (
                   <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #ccc' }}>
-                    <p style={{ color: '#666', fontSize: '1.1rem' }}>Aún no hay tutores registrados en la colección <strong>'tutores'</strong> de Firebase.</p>
+                    <p style={{ color: '#666', fontSize: '1.1rem' }}>No hay estudiantes que coincidan con la búsqueda o la colección está vacía.</p>
                   </div>
                 ) : (
-                  tutores.map(tutor => (
-                    <div key={tutor.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb', borderLeft: '4px solid #991b1b', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                      <h3 style={{ margin: '0 0 0.5rem 0', color: '#111' }}>{tutor.nombre || tutor.nombres || 'Tutor Sin Nombre'}</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem', color: '#4b5563' }}>
-                        <span>📧 {tutor.correo || tutor.email || 'Sin correo institucional'}</span>
-                        {tutor.cvlac && <span>🔗 CvLAC Activo</span>}
-                        {tutor.lineaInvestigacion && <span style={{ marginTop: '0.5rem', backgroundColor: '#fef2f2', color: '#991b1b', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', display: 'inline-block', width: 'fit-content' }}>Línea: {tutor.lineaInvestigacion}</span>}
+                  maestrantesFiltrados.map(estudiante => (
+                    <div key={estudiante.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column' }}>
+                      
+                      {/* Cabecera Maestrante */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <span style={{ backgroundColor: '#ecfdf5', color: '#065f46', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', border: '1px solid #a7f3d0' }}>
+                          {estudiante.programa || 'PROG'}
+                        </span>
+                        <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: '600' }}>
+                          Semestre {estudiante.semestre || 'I'}
+                        </span>
+                      </div>
+                      
+                      <h3 style={{ margin: '0 0 0.5rem 0', color: '#111', fontSize: '1.2rem', lineHeight: '1.3' }}>
+                        {estudiante.nombre || estudiante.nombres || 'Estudiante Sin Nombre'}
+                      </h3>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                          <span style={{ width: '20px', textAlign: 'center' }}>📧</span>
+                          <span style={{ wordBreak: 'break-all' }}>{estudiante.correo || estudiante.email || 'Sin correo institucional'}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                          <span style={{ width: '20px', textAlign: 'center' }}>🪪</span>
+                          <span>CC: <strong>{enmascararDocumento(estudiante.documento || estudiante.cedula)}</strong></span>
+                        </div>
+                        {estudiante.estado && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: '#4b5563' }}>
+                            <span style={{ width: '20px', textAlign: 'center' }}>📌</span>
+                            <span>Estado: <strong style={{ color: '#047857' }}>{estudiante.estado}</strong></span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Maestrante */}
+                      <div style={{ marginTop: 'auto', borderTop: '1px solid #f1f5f9', paddingTop: '1rem', display: 'flex', justifyContent: 'center' }}>
+                         <button style={{ backgroundColor: '#f8fafc', color: '#065f46', border: '1px solid #e2e8f0', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: '600', fontSize: '0.85rem', cursor: 'pointer', width: '100%' }}>
+                           Ver Ficha de Seguimiento
+                         </button>
                       </div>
                     </div>
                   ))
@@ -189,30 +263,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* VISTA: MAESTRANTES */}
-        {vistaActiva === 'maestrantes' && (
-          <div>
-            <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem', color: '#111' }}>Directorio de Maestrantes</h2>
-            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando maestrantes...</div> : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-                {maestrantes.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', padding: '3rem', textAlign: 'center', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #ccc' }}>
-                    <p style={{ color: '#666', fontSize: '1.1rem' }}>Aún no hay estudiantes registrados en la colección <strong>'maestrantes'</strong> de Firebase.</p>
-                  </div>
-                ) : (
-                  maestrantes.map(estudiante => (
-                    <div key={estudiante.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb', borderLeft: '4px solid #065f46', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                      <span style={{ backgroundColor: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>{estudiante.programa || 'PROG'}</span>
-                      <h3 style={{ margin: '0.5rem 0', color: '#111' }}>{estudiante.nombre || estudiante.nombres || 'Estudiante Sin Nombre'}</h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.9rem', color: '#4b5563' }}>
-                        <span>📧 {estudiante.correo || estudiante.email || 'Sin correo'}</span>
-                        <span>🎓 Semestre: {estudiante.semestre || 'I'}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+        {/* VISTA: TUTORES (Temporal) */}
+        {vistaActiva === 'tutores' && (
+          <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: 'white', borderRadius: '12px', border: '1px dashed #ccc' }}>
+            <h2>Módulo de Tutores en construcción</h2>
+            <button onClick={() => setVistaActiva('inicio')} style={{ marginTop: '1rem', padding: '0.5rem 1rem' }}>Volver al Inicio</button>
           </div>
         )}
 
