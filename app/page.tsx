@@ -5,22 +5,35 @@ import { db } from '../firebase';
 
 export default function Home() {
   const [vistaActiva, setVistaActiva] = useState('inicio');
-  const [datos, setDatos] = useState<any[]>([]);
   const [cargando, setCargando] = useState<boolean>(true);
 
-  // Estados Proyectos
+  // Estados de Colecciones
+  const [datos, setDatos] = useState<any[]>([]); // Proyectos
+  const [tutores, setTutores] = useState<any[]>([]);
+  const [maestrantes, setMaestrantes] = useState<any[]>([]);
+
+  // Estados Formulario y Filtros
   const [busqueda, setBusqueda] = useState('');
-  const [filtroPrograma, setFiltroPrograma] = useState('');
   const [mostrarModalProyecto, setMostrarModalProyecto] = useState(false);
   const [nuevoProyecto, setNuevoProyecto] = useState({ programa: 'MDGEVA', codigoInvestigacion: '', correoAutor: '', tutorPrincipal: '', semestre: '1', consecutivoConfirmadoPorTutor: false });
 
   async function leerDatos() {
     try {
-      const querySnapshot = await getDocs(collection(db, 'projects'));
-      const items: any[] = [];
-      querySnapshot.forEach((doc) => { items.push({ id: doc.id, ...doc.data() }); });
-      setDatos(items);
-    } catch (err: any) { console.error(err); } finally { setCargando(false); }
+      // Llamada simultánea a las 3 colecciones
+      const [proyectosSnap, tutoresSnap, maestrantesSnap] = await Promise.all([
+        getDocs(collection(db, 'projects')),
+        getDocs(collection(db, 'tutores')),
+        getDocs(collection(db, 'maestrantes'))
+      ]);
+      
+      setDatos(proyectosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setTutores(tutoresSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setMaestrantes(maestrantesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (err: any) { 
+      console.error("Error leyendo Firebase:", err); 
+    } finally { 
+      setCargando(false); 
+    }
   }
 
   useEffect(() => { leerDatos(); }, []);
@@ -29,7 +42,7 @@ export default function Home() {
     (p.codigoInvestigacion || '').toLowerCase().includes(busqueda.toLowerCase()) || 
     (p.correoAutor || '').toLowerCase().includes(busqueda.toLowerCase()) ||
     (p.titulo || '').toLowerCase().includes(busqueda.toLowerCase()) ||
-    (p.nombreAutor || '').toLowerCase().includes(busqueda.toLowerCase())
+    (p.tutorPrincipal || '').toLowerCase().includes(busqueda.toLowerCase())
   );
 
   return (
@@ -57,8 +70,8 @@ export default function Home() {
         {[
           { id: 'inicio', label: 'Inicio', tag: 'Portal' },
           { id: 'proyectos', label: 'Proyectos', count: datos.length },
-          { id: 'tutores', label: 'Tutores', count: 78 },
-          { id: 'maestrantes', label: 'Maestrantes', count: 807 }
+          { id: 'tutores', label: 'Tutores', count: tutores.length },
+          { id: 'maestrantes', label: 'Maestrantes', count: maestrantes.length }
         ].map(item => (
           <button 
             key={item.id}
@@ -78,69 +91,110 @@ export default function Home() {
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         
-        {/* ================= VISTA: INICIO COMPLETA ================= */}
+        {/* ================= VISTA: INICIO ================= */}
         {vistaActiva === 'inicio' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-            
-            {/* HERO INSTITUCIONAL */}
             <div style={{ backgroundColor: '#0f172a', borderRadius: '16px', overflow: 'hidden', color: 'white', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}>
               <div style={{ padding: '4rem 3rem' }}>
                 <div style={{ color: '#fbbf24', fontWeight: 'bold', marginBottom: '1rem', letterSpacing: '1px' }}>Facultad de Ciencias de la Educación • Universidad de La Salle</div>
-                <h1 style={{ fontSize: '2.8rem', lineHeight: '1.2', marginBottom: '1.5rem', maxWidth: '900px' }}>Sistema Integrado de Gestión y Seguimiento de Investigaciones de Maestrías <span style={{ color: '#fbbf24' }}>(BDMaestrías)</span></h1>
-                <p style={{ fontSize: '1.2rem', color: '#94a3b8', maxWidth: '800px', marginBottom: '2.5rem', lineHeight: '1.6' }}>Plataforma institucional para la consulta, caracterización y gobernanza académica de los proyectos de grado, asignaciones de tutoría y núcleos problémicos de las maestrías en Educación.</p>
+                <h1 style={{ fontSize: '2.8rem', lineHeight: '1.2', marginBottom: '1.5rem', maxWidth: '900px' }}>Sistema Integrado de Gestión y Seguimiento de Investigaciones <span style={{ color: '#fbbf24' }}>(BDMaestrías)</span></h1>
+                <p style={{ fontSize: '1.2rem', color: '#94a3b8', maxWidth: '800px', marginBottom: '2.5rem', lineHeight: '1.6' }}>Plataforma institucional para la consulta, caracterización y gobernanza académica.</p>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                  <button onClick={() => setVistaActiva('proyectos')} style={{ backgroundColor: '#be123c', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Proyectos ({datos.length}) →</button>
-                  <button onClick={() => setVistaActiva('tutores')} style={{ backgroundColor: '#334155', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}>Directorio Docente (78)</button>
+                  <button onClick={() => setVistaActiva('proyectos')} style={{ backgroundColor: '#be123c', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}>Explorar Proyectos →</button>
+                  <button onClick={() => setVistaActiva('tutores')} style={{ backgroundColor: '#334155', color: 'white', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}>Directorio Docente</button>
                 </div>
               </div>
-              <div style={{ backgroundColor: '#1e293b', padding: '2rem 3rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '2rem', borderTop: '1px solid #334155' }}>
-                {[
-                  { title: 'INVESTIGACIONES', value: datos.length, sub: '335 fichas al día' },
-                  { title: 'CUERPO DE TUTORES', value: '78', sub: '60 caracterizados' },
-                  { title: 'MAESTRANTES', value: '807', sub: 'Fichas protegidas' },
-                  { title: 'PROGRAMAS PEP', value: '4', sub: 'MDO, MDL, MDGEVA, MLGE' },
-                  { title: 'TESAURO', value: '58', sub: 'UNESCO / ERIC Oficial' }
-                ].map((stat, i) => (
-                  <div key={i}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 'bold', letterSpacing: '1px', marginBottom: '0.5rem' }}>{stat.title}</div>
-                    <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white', marginBottom: '0.25rem' }}>{stat.value}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#10b981' }}>✓ {stat.sub}</div>
+            </div>
+            
+            {/* Rutas de acceso (Resumidas para asegurar copiado) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+                <h3 style={{ margin: '0 0 1rem 0' }}>🎓 Estudiante Maestrante</h3>
+                <button onClick={() => setVistaActiva('maestrantes')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#065f46', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Módulo Maestrantes</button>
+              </div>
+              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb' }}>
+                <h3 style={{ margin: '0 0 1rem 0' }}>👥 Docente Tutor</h3>
+                <button onClick={() => setVistaActiva('tutores')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#991b1b', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Módulo Tutores</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= VISTA: PROYECTOS ================= */}
+        {vistaActiva === 'proyectos' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.8rem', margin: 0, color: '#111' }}>Directorio de Proyectos</h2>
+              <input type="text" placeholder="Buscar título, código o tutor..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid #ccc', minWidth: '300px' }} />
+            </div>
+            
+            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando desde Firebase...</div> : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
+                {proyectosFiltrados.map(proyecto => (
+                  <div key={proyecto.id} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                      <span style={{ backgroundColor: '#4338ca', color: 'white', padding: '4px 12px', borderRadius: '16px', fontWeight: 'bold', fontSize: '0.8rem' }}>{proyecto.programaKey || 'PROG'}</span>
+                      <span style={{ backgroundColor: '#f1f5f9', color: '#475569', padding: '4px 12px', borderRadius: '16px', fontWeight: '500', fontSize: '0.8rem' }}>{proyecto.codigoInvestigacion || 'Sin código'}</span>
+                    </div>
+                    <h3 style={{ color: '#7f1d1d', fontSize: '1.25rem', fontWeight: 'bold', margin: '0 0 1rem 0' }}>{proyecto.titulo || proyecto.resumen || 'Investigación'}</h3>
+                    <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+                      <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Autor: </span><span style={{ color: '#047857', fontWeight: 'bold' }}>{proyecto.nombreAutor || proyecto.correoAutor}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Tutor: <strong style={{ color: '#1e3a8a' }}>{proyecto.tutorPrincipal}</strong></span>
+                      <span style={{ color: '#475569', fontWeight: '600', fontSize: '0.9rem' }}>Semestre {proyecto.semestre || 'I'}</span>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
+          </div>
+        )}
 
-            {/* SECCIÓN RUTAS */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end', marginBottom: '1.5rem' }}>
-                <div>
-                  <h2 style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0', color: '#111' }}>¿Cómo deseas interactuar hoy? Selecciona tu ruta</h2>
-                  <p style={{ color: '#666', margin: 0 }}>Accesos guiados optimizados según tu rol en la comunidad de Maestrías.</p>
-                </div>
-                <div style={{ fontSize: '0.9rem', color: '#666' }}>4 perfiles de navegación</div>
+        {/* ================= VISTA: TUTORES ================= */}
+        {vistaActiva === 'tutores' && (
+          <div>
+            <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem', color: '#111' }}>Directorio Docente (Tutores)</h2>
+            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando tutores...</div> : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {tutores.length === 0 ? (
+                  <p style={{ color: '#666' }}>No hay tutores registrados en la colección 'tutores' de Firebase aún.</p>
+                ) : (
+                  tutores.map(tutor => (
+                    <div key={tutor.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+                      <h3 style={{ margin: '0 0 0.5rem 0', color: '#991b1b' }}>{tutor.nombre || 'Tutor Sin Nombre'}</h3>
+                      <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{tutor.correo || 'Sin correo'}</p>
+                    </div>
+                  ))
+                )}
               </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ width: '40px', height: '40px', backgroundColor: '#ecfdf5', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#10b981', fontWeight: 'bold' }}>🎓</div>
-                  <h3 style={{ margin: '0 0 1rem 0' }}>Estudiante Maestrante</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem', flex: 1 }}>Consulta tu ficha de seguimiento, tutor asignado, proyecto de tesis y actualiza tus datos protegidos por tu documento de identidad.</p>
-                  <button onClick={() => setVistaActiva('maestrantes')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#065f46', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>Módulo Maestrantes</button>
-                  <button onClick={() => setVistaActiva('proyectos')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#f9fafb', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}>Buscar Investigaciones</button>
-                </div>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ width: '40px', height: '40px', backgroundColor: '#fef2f2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#ef4444', fontWeight: 'bold' }}>👥</div>
-                  <h3 style={{ margin: '0 0 1rem 0' }}>Docente Tutor / Director</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem', flex: 1 }}>Registra o actualiza tu perfil docente, líneas temáticas activas, enlaces CvLAC/ORCID y consulta los proyectos bajo tu asesoría.</p>
-                  <button onClick={() => setVistaActiva('tutores')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#991b1b', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>Módulo Tutores</button>
-                  <button onClick={() => setVistaActiva('proyectos')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#f9fafb', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}>Ver Proyectos Asesorados</button>
-                </div>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ width: '40px', height: '40px', backgroundColor: '#fffbeb', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: '#f59e0b', fontWeight: 'bold' }}>📊</div>
-                  <h3 style={{ margin: '0 0 1rem 0' }}>Coordinación & Comités</h3>
-                  <p style={{ color: '#666', fontSize: '0.9rem', flex: 1 }}>Supervisa la cobertura de núcleos de formación, mallas curriculares, distribución de cargas de asesoría y estadísticas globales.</p>
-                  <button style={{ width: '100%', padding: '0.8rem', backgroundColor: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '0.5rem' }}>Dashboard de Métricas</button>
-                  <button style={{ width: '100%', padding: '0.8rem', backgroundColor: '#f9fafb', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '6px', cursor: 'pointer' }}>Mallas y PEP</button>
-                </div>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{
+            )}
+          </div>
+        )}
+
+        {/* ================= VISTA: MAESTRANTES ================= */}
+        {vistaActiva === 'maestrantes' && (
+          <div>
+            <h2 style={{ fontSize: '1.8rem', marginBottom: '1.5rem', color: '#111' }}>Módulo de Maestrantes</h2>
+            {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando maestrantes...</div> : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                {maestrantes.length === 0 ? (
+                  <p style={{ color: '#666' }}>No hay maestrantes registrados en la colección 'maestrantes' de Firebase aún.</p>
+                ) : (
+                  maestrantes.map(estudiante => (
+                    <div key={estudiante.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+                      <span style={{ backgroundColor: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>{estudiante.programa || 'Programa'}</span>
+                      <h3 style={{ margin: '0.5rem 0', color: '#065f46' }}>{estudiante.nombre || 'Estudiante Sin Nombre'}</h3>
+                      <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>{estudiante.correo || 'Sin correo'}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
