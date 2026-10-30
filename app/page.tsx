@@ -4,19 +4,19 @@ import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function Home() {
-  const [datos, setDatos] = useState([]);
-  const [error, setError] = useState(null);
+  const [datos, setDatos] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function leerDatos() {
       try {
         const querySnapshot = await getDocs(collection(db, 'projects'));
-        const items = [];
+        const items: any[] = [];
         querySnapshot.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() });
         });
         setDatos(items);
-      } catch (err) {
+      } catch (err: any) {
         setError(err.message);
       }
     }
