@@ -27,7 +27,7 @@ export default function Home() {
   // Estados para nuevos registros
   const [nuevoProyecto, setNuevoProyecto] = useState({ programaKey: 'MDGEVA', codigoInvestigacion: '', correoAutor: '', tutorPrincipal: '', semestre: '1', consecutivoConfirmadoPorTutor: false, titulo: '' });
   const [nuevoMaestrante, setNuevoMaestrante] = useState({ nombreCompleto: '', correoInstitucional: '', cedula: '', programaKey: 'MDGEVA', semestre: '1', tipoEstudiante: 'Activo' });
-  const [nuevoTutor, setNuevoTutor] = useState({ nombreCompleto: '', programa: 'MDGEVA', nivelFormacion: '', idiomasRefleja: '', correoInstitucional: '', grupoInvestigacion: '', modalidadColoquio: 'Presencial' });
+  const [nuevoTutor, setNuevoTutor] = useState({ nombreCompleto: '', programaPrincipal: 'MDGEVA', correoInstitucional: '', grupoInvestigacion: '', modalidadColoquio: 'Presencial' });
 
   async function leerDatos() {
     setCargando(true);
@@ -42,7 +42,6 @@ export default function Home() {
       setTutores(tSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
       setMaestrantes(mSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() })));
       
-      // Extraer datos del sistema (secretarías/dirección) si existen
       const sysDocs = sSnap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
       const dirSec = sysDocs.find(d => d.id === 'direccion_secretarias' || d.direccion);
       if (dirSec) setSistema(dirSec);
@@ -52,10 +51,9 @@ export default function Home() {
 
   useEffect(() => { leerDatos(); }, []);
 
-  // Filtrado ajustado a los campos reales
   const proyectosFiltrados = datos.filter(p => (p.codigoInvestigacion || '').toLowerCase().includes(busqueda.toLowerCase()) || (p.titulo || '').toLowerCase().includes(busqueda.toLowerCase()));
-  const maestrantesFiltrados = maestrantes.filter(m => (m.nombreCompleto || '').toLowerCase().includes(busquedaMaestrantes.toLowerCase()) || (m.correoInstitucional || '').toLowerCase().includes(busquedaMaestrantes.toLowerCase()));
-  const tutoresFiltrados = tutores.filter(t => (t.nombreCompleto || '').toLowerCase().includes(busquedaTutores.toLowerCase()));
+  const maestrantesFiltrados = maestrantes.filter(m => (m.nombreCompleto || m.nombre || '').toLowerCase().includes(busquedaMaestrantes.toLowerCase()) || (m.correoInstitucional || m.correo || '').toLowerCase().includes(busquedaMaestrantes.toLowerCase()));
+  const tutoresFiltrados = tutores.filter(t => (t.nombreCompleto || t.nombre || '').toLowerCase().includes(busquedaTutores.toLowerCase()));
 
   const enmascararDocumento = (doc: string) => { if (!doc) return 'Sin registrar'; if (doc.length <= 4) return '***' + doc; return '***' + doc.slice(-4); };
   const obtenerIniciales = (nombre: string) => { if (!nombre) return 'NA'; const partes = String(nombre).trim().split(' '); return partes.length >= 2 ? (partes[0][0] + partes[1][0]).toUpperCase() : String(nombre).substring(0, 2).toUpperCase(); };
@@ -133,7 +131,6 @@ export default function Home() {
               <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', border: '1px solid #e5e7eb' }}><h3 style={{ margin: '0 0 1rem 0' }}>📊 Coordinación (Mallas)</h3><button onClick={() => setVistaActiva('mallas')} style={{ width: '100%', padding: '0.8rem', backgroundColor: '#f59e0b', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Ver Mallas y PEP</button></div>
             </div>
 
-            {/* Renderizar info de Dirección si existe en Firebase (colección system) */}
             {sistema && sistema.direccion && (
               <div style={{ backgroundColor: '#0f172a', borderRadius: '12px', padding: '2.5rem', marginTop: '2rem', color: 'white' }}>
                 <div style={{ display: 'inline-block', backgroundColor: '#334155', color: '#fbbf24', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>CONTACTO OFICIAL FCE</div>
@@ -158,13 +155,12 @@ export default function Home() {
             {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando...</div> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
                 {proyectosFiltrados.map(p => {
-                  // Mapeo ajustado a la captura de projects
-                  const titulo = p.titulo || 'Título de investigación no registrado';
+                  const titulo = p.titulo || p.resumen || 'Título de investigación no registrado';
                   const autor = p.autorPrincipal || p.correoAutor || 'Autor no registrado';
                   const tutor = p.tutorPrincipal || 'Sin asignar';
                   const codigo = p.codigoInvestigacion || 'Sin código';
                   const programa = p.programaKey || 'PROG';
-                  const coautoresStr = Array.isArray(p.autoresDetalle) ? p.autoresDetalle.filter((a:any) => !a.esAutorPrincipal).map((a:any) => a.nombre).join(', ') : p.coautores;
+                  const coautoresStr = Array.isArray(p.autoresDetalle) ? p.autoresDetalle.filter((a:any) => !a.esAutorPrincipal).map((a:any) => a.nombre).join(', ') : (p.coautores || '');
                   
                   return (
                     <div key={p.id} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
@@ -215,14 +211,13 @@ export default function Home() {
             {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando...</div> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
                 {maestrantesFiltrados.map(m => {
-                  // Mapeo ajustado a la captura de students
-                  const nombre = m.nombreCompleto || 'Maestrante Sin Nombre';
-                  const doc = m.cedula || '';
-                  const correo = m.correoInstitucional || 'Sin correo institucional';
+                  const nombre = m.nombreCompleto || m.nombre || 'Maestrante Sin Nombre';
+                  const doc = m.cedula || m.documento || '';
+                  const correo = m.correoInstitucional || m.correo || 'Sin correo institucional';
                   const proyecto = m.tituloProyecto || 'Proyecto no registrado';
                   const codProy = m.codigoInvestigacion || 'Sin código';
-                  const tutor = m.tutorPrincipal || 'Sin asignar';
-                  const programaAbr = m.programaKey || 'PROG';
+                  const tutor = m.tutorPrincipal || m.tutorAsignado || 'Sin asignar';
+                  const programaAbr = m.programaKey || m.programa || 'PROG';
 
                   return (
                     <div key={m.id} style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
@@ -246,7 +241,7 @@ export default function Home() {
                           <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Tutor:</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ color: '#0f172a', fontWeight: 'bold', fontSize: '0.9rem' }}>{tutor}</span>
-                            {!m.tutorConfirmado && <span style={{ backgroundColor: '#fef08a', color: '#a16207', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', border: '1px solid #fde047' }}>⏳ Sin confirmar</span>}
+                            {m.consecutivoConfirmadoPorTutor === false && <span style={{ backgroundColor: '#fef08a', color: '#a16207', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', border: '1px solid #fde047' }}>⏳ Sin confirmar</span>}
                           </div>
                         </div>
                       </div>
@@ -279,24 +274,40 @@ export default function Home() {
             {cargando ? <div style={{ textAlign: 'center', padding: '3rem' }}>Cargando...</div> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
                 {tutoresFiltrados.map(t => {
-                  // Mapeo ajustado a la captura de tutors
-                  const nombre = t.nombreCompleto || 'Tutor Sin Nombre';
-                  const correo = t.correoInstitucional || 'Sin correo institucional';
+                  // Mapeo Profundo para Tutores
+                  const nombre = t.nombreCompleto || t.nombre || 'Tutor Sin Nombre';
+                  const correo = t.correoInstitucional || t.correo || 'Sin correo institucional';
+                  const programa = t.programaPrincipal || t.programa || 'FCE';
                   
-                  // Formación Académica puede estar bajo arrays en tu BD, usamos fallbacks directos
-                  const formacion = t.titulos ? Object.values(t.titulos).join(' • ') : 'Formación académica no registrada';
-                  const labora = t.institucion || 'Institución no registrada';
-                  
-                  // Extraer líneas de interés si existen en un array o string
-                  let lineasArr = [];
-                  if (t.lineasInvestigacion) {
-                     if(Array.isArray(t.lineasInvestigacion)) lineasArr = t.lineasInvestigacion;
-                     else if(typeof t.lineasInvestigacion === 'string') lineasArr = t.lineasInvestigacion.split(',');
-                  }
+                  // Leer formación desde el array anidado o campo plano
+                  let formacionStr = 'Formación académica no registrada';
+                  if (t.perfilAcademico?.titulos) {
+                     formacionStr = Array.isArray(t.perfilAcademico.titulos) ? t.perfilAcademico.titulos.join(' • ') : Object.values(t.perfilAcademico.titulos).join(' • ');
+                  } else if (t.formacion) { formacionStr = t.formacion; }
 
-                  // Contar temas
-                  const asesorTemas = Array.isArray(t.temasAsesoria) ? t.temasAsesoria.length : 0;
-                  const juradoTemas = Array.isArray(t.temasJurado) ? t.temasJurado.length : 0;
+                  const labora = t.datosLaborales?.institucion || t.laboraEn || 'Institución no registrada';
+                  const cvlac = t.redesAcademicas?.cvlac || t.cvlac || '';
+                  const orcid = t.redesAcademicas?.orcid || t.orcid || '';
+                  const modalidadColoquio = t.modalidadColoquio || t.coloquio || 'Por definir';
+                  const grupo = t.grupoInvestigacion || t.grupo || 'Sin grupo registrado';
+
+                  // Contar temas desde arrays
+                  const asesorTemas = Array.isArray(t.temasAsesoria) ? t.temasAsesoria.length : (t.temasAsesoria ? Object.keys(t.temasAsesoria).length : 0);
+                  const juradoTemas = Array.isArray(t.temasJurado) ? t.temasJurado.length : (t.temasJurado ? Object.keys(t.temasJurado).length : 0);
+
+                  // Extraer líneas desde array anidado o campo plano
+                  let lineasArr: string[] = [];
+                  if (t.areasInteres) {
+                    if (Array.isArray(t.areasInteres)) lineasArr = t.areasInteres;
+                    else if (typeof t.areasInteres === 'object') lineasArr = Object.values(t.areasInteres);
+                    else if (typeof t.areasInteres === 'string') lineasArr = t.areasInteres.split(',');
+                  } else if (t.lineasInvestigacion) {
+                    if (Array.isArray(t.lineasInvestigacion)) lineasArr = t.lineasInvestigacion;
+                    else if (typeof t.lineasInvestigacion === 'object') lineasArr = Object.values(t.lineasInvestigacion);
+                    else if (typeof t.lineasInvestigacion === 'string') lineasArr = t.lineasInvestigacion.split(',');
+                  } else if (t.lineasInteres) {
+                    lineasArr = typeof t.lineasInteres === 'string' ? t.lineasInteres.split(',') : t.lineasInteres;
+                  }
 
                   return (
                     <div key={t.id} style={{ backgroundColor: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}>
@@ -304,27 +315,26 @@ export default function Home() {
                         <div style={{ width: '50px', height: '50px', borderRadius: '12px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#1e3a8a' }}>{obtenerIniciales(nombre)}</div>
                         <div>
                           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                            <span style={{ backgroundColor: '#4338ca', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{t.programa || 'FCE'}</span>
+                            <span style={{ backgroundColor: '#4338ca', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>{programa}</span>
                             <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 'bold' }}>✓ Autorizado</span>
                           </div>
                           <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.3rem' }}>{nombre}</h3>
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#334155' }}><span>🎓</span><span>{formacion}</span></div>
+                        <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#334155' }}><span>🎓</span><span>{formacionStr}</span></div>
                         
-                        {(t.idiomasRefleja) && (
+                        {(t.idiomasRefleja || t.idioma) && (
                           <div style={{ display: 'inline-block', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', padding: '4px 8px', borderRadius: '8px', fontSize: '0.85rem', color: '#334155', width: 'fit-content' }}>
-                            <span style={{ color: '#4338ca' }}>A/A</span> Idioma: <strong>{t.idiomasRefleja}</strong>
+                            <span style={{ color: '#4338ca' }}>A/A</span> Idioma: <strong>{t.idiomasRefleja || t.idioma}</strong>
                           </div>
                         )}
                         
                         <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#334155' }}><span>🏢</span><span><strong>Labora en:</strong> {labora}</span></div>
-                        
                         <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#4338ca' }}><span>✉️</span><span>{correo}</span></div>
                         
-                        {t.grupoInvestigacion && (
-                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#92400e' }}><span>📖</span><span>Grupo: {t.grupoInvestigacion}</span></div>
+                        {grupo && (
+                          <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.9rem', color: '#92400e' }}><span>📖</span><span>Grupo: {grupo}</span></div>
                         )}
                       </div>
                       
@@ -332,14 +342,14 @@ export default function Home() {
                         <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#64748b', marginBottom: '0.5rem' }}>LÍNEAS Y ÁREAS DE INTERÉS</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                           {lineasArr.length > 0 ? lineasArr.map((linea: string, i: number) => (
-                            <span key={i} style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', color: '#475569' }}>{linea.trim()}</span>
+                            <span key={i} style={{ backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '4px 10px', borderRadius: '6px', fontSize: '0.85rem', color: '#475569' }}>{String(linea).trim()}</span>
                           )) : <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Líneas no registradas</span>}
                         </div>
                       </div>
                       
                       <div style={{ backgroundColor: '#f8fafc', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <span style={{ fontWeight: 'bold', color: '#334155', fontSize: '0.9rem' }}>Coloquio:</span><span style={{ backgroundColor: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{t.modalidadColoquio || 'Por definir'}</span>
+                          <span style={{ fontWeight: 'bold', color: '#334155', fontSize: '0.9rem' }}>Coloquio:</span><span style={{ backgroundColor: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>{modalidadColoquio}</span>
                         </div>
                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
                           <span style={{ backgroundColor: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: '16px', fontSize: '0.85rem' }}>✓ Asesor ({asesorTemas} temas)</span>
@@ -348,8 +358,8 @@ export default function Home() {
                       </div>
                       <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1rem' }}>
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                          {t.cvlac && <a href={t.cvlac} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem', textDecoration: 'none' }}>CvLAC ↗</a>}
-                          {t.orcid && <a href={t.orcid} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.9rem', textDecoration: 'none' }}>● ORCID</a>}
+                          {cvlac && <a href={cvlac} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '0.9rem', textDecoration: 'none' }}>CvLAC ↗</a>}
+                          {orcid && <a href={orcid} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 'bold', fontSize: '0.9rem', textDecoration: 'none' }}>● ORCID</a>}
                         </div>
                         <button style={{ backgroundColor: '#0f172a', color: 'white', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.9rem', cursor: 'pointer' }}>✏️ Actualizar Perfil</button>
                       </div>
@@ -365,7 +375,6 @@ export default function Home() {
         {vistaActiva === 'mallas' && (
           <div style={{ backgroundColor: '#f8fafc', padding: '2rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
             
-            {/* Top Selector (Ahora las 4 Maestrías son interactivas) */}
             <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #e2e8f0' }}>
               {programasPEP.map(prog => (
                 <div key={prog.id} onClick={() => setPepActivo(prog.id)} style={{ border: pepActivo === prog.id ? '2px solid #6366f1' : '1px solid #cbd5e1', borderRadius: '8px', padding: '1rem', minWidth: '220px', backgroundColor: 'white', opacity: pepActivo === prog.id ? 1 : 0.6, cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -375,7 +384,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* Renderizado Dinámico del PEP según la selección */}
             {programasPEP.filter(p => p.id === pepActivo).map(prog => (
               <div key={prog.id}>
                 <div style={{ marginBottom: '2rem' }}>
@@ -402,18 +410,13 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '2rem', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ color: '#4338ca', marginTop: 0 }}>⚙️ Detalles del Programa - {prog.id}</h3>
-                  <p style={{ color: '#475569' }}>La información detallada de los {prog.num} núcleos problémicos de este programa, así como su misión, enfoque pedagógico y líneas de investigación asociadas, se encuentran parametrizadas en el repositorio documental académico oficial.</p>
-                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* ================= MODALES ================= */}
+      {/* ================= MODALES (REDUCIDOS PARA COMPILAR CORRECTAMENTE) ================= */}
       {mostrarModalMaestrante && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '1rem' }}>
           <div style={{ backgroundColor: 'white', padding: '2rem', borderRadius: '12px', width: '100%', maxWidth: '500px' }}>
